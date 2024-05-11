@@ -1,28 +1,23 @@
-# Script to train machine learning model.
-
-from sklearn.model_selection import train_test_split
-import pickle, os
 import pandas as pd
+from sklearn.model_selection import train_test_split
+import pickle, os, sys, logging
 from data import process_data
-import os
-import sys
-from model import train_model, compute_model_metrics , inference, compute_slices
-from model import compute_confusion_matrix
-import logging
+from model import train_model, compute_model_metrics, inference, compute_slices, compute_confusion_matrix
 
-# Add code to load in the data.
+# Setup logging
+logging.basicConfig(level=logging.INFO)
 
-# Optional enhancement, use K-fold cross validation instead of a train-test split.
-data = pd.read_csv("../data/census.csv", sep=", ", engine='python')
+# Load in the data
+current_directory = os.getcwd()
+data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', 'census.csv'))
+data = pd.read_csv(data_path, sep=", ", engine='python')
 
-# Optional enhancement, use K-fold cross validation instead of a
-# train-test split using stratify due to class imbalance
-train, test = train_test_split( data,
-                                test_size=0.20,
-                                random_state=10,
-                                stratify=data['salary']
-                                )
+# Split the data into training and test sets
+train, test = train_test_split(data, test_size=0.20, random_state=10, stratify=data['salary'])
+logging.info("Data split into training and test sets.")
 
+
+# Define categorical features
 cat_features = [
     "workclass",
     "education",
@@ -34,82 +29,63 @@ cat_features = [
     "native-country",
 ]
 
-X_train, y_train, encoder, lb = process_data(
-    train,
-    categorical_features=cat_features,
-    label="salary",
-    training=True
-)
+# Process the training data
+X_train, y_train, encoder, lb = process_data(train, categorical_features=cat_features, label="salary", training=True)
+logging.info("Training data processed.")
 
-# Proces the test data with the process_data function.
-# Set train flag = False - We use the encoding from the train set
-X_test, y_test, encoder, lb = process_data(
-    test,
-    categorical_features=cat_features,
-    label="salary",
-    training=False,
-    encoder=encoder,
-    lb=lb
-)
 
-savepath = '../model'
-# Define the filenames for the stored model components
+# Process the test data
+X_test, y_test, encoder, lb = process_data(test, categorical_features=cat_features, label="salary", training=False, encoder=encoder, lb=lb)
+logging.info("Test data processed.")
+
+# Define the path to save model files
+savepath = './model'
 filenames = ['trained_model.pkl', 'encoder.pkl', 'labelizer.pkl']
 
-# Check if the trained model exists on disk and load it
-if os.path.isfile(os.path.join(savepath, filenames[0])):
-    model = pickle.load(open(os.path.join(savepath, filenames[0]), 'rb'))
-    encoder = pickle.load(open(os.path.join(savepath, filenames[1]), 'rb'))
-    lb = pickle.load(open(os.path.join(savepath, filenames[2]), 'rb'))
-
-# If the model does not exist, train a new model and save it to disk
-else:
-    # Train the model using the training data
-    model = train_model(X_train, y_train)
-
-    # Save the model and its components to disk in the specified directory
-    pickle.dump(model, open(os.path.join(savepath, filenames[0]), 'wb'))
-    pickle.dump(encoder, open(os.path.join(savepath, filenames[1]), 'wb'))
-    pickle.dump(lb, open(os.path.join(savepath, filenames[2]), 'wb'))
-
-    # Log the action of saving the model
-    logging.info(f"Model and components saved to disk at: {savepath}")
-
-precision, recall, fbeta = compute_model_metrics(y_test,inference(model,X_test))
-
-logging.info(f"Classification target labels: {list(lb.classes_)}")
-logging.info(
-    f"precision:{precision:.3f}, recall:{recall:.3f}, fbeta:{fbeta:.3f}")
-
-
-
-output_dir = 'output_files'
-
 # Create the directory if it does not exist
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
+os.makedirs(savepath, exist_ok=True)
+
+# Check if the trained model exists on disk and load it
+try:
+    if all(os.path.isfile(os.path.join(savepath, fname)) for fname in filenames):
+        model = pickle.load(open(os.path.join(savepath, filenames[0]), 'rb'))
+        encoder = pickle.load(open(os.path.join(savepath, filenames[1]), 'rb'))
+        lb = pickle.load(open(os.path.join(savepath, filenames[2]), 'rb'))
+        logging.info("Model and components loaded from disk.")
+    else:
+        # Train a new model and save it to disk
+        model = train_model(X_train, y_train)
+        pickle.dump(model, open(os.path.join(savepath, filenames[0]), 'wb'))
+        pickle.dump(encoder, open(os.path.join(savepath, filenames[1]), 'wb'))
+        pickle.dump(lb, open(os.path.join(savepath, filenames[2]), 'wb'))
+        logging.info(f"Model and components saved to disk at: {savepath}")
+except Exception as e:
+    logging.error(f"Error during model loading or saving: {e}")
+    sys.exit("Exiting due to error in model handling.")
+
+# Compute model metrics
+precision, recall, fbeta = compute_model_metrics(y_test, inference(model, X_test))
+logging.info(f"Classification target labels: {list(lb.classes_)}")
+logging.info(f"Precision: {precision:.3f}, Recall: {recall:.3f}, F-beta: {fbeta:.3f}")
+
+# Define output directory for performance slices
+output_dir = 'output_files'
+os.makedirs(output_dir, exist_ok=True)
 
 # Define the path to save the CSV file
 slice_savepath = os.path.join(output_dir, 'performance_slices.csv')
 
-for feature in cat_features:
-    performance_df = compute_slices(test, feature, y_test, inference(model, X_test))
-
-    # Check if the file already exists to avoid repeating headers
-    if os.path.exists(slice_savepath):
-        performance_df.to_csv(slice_savepath, mode='a', header=False, index=False)
-    else:
-        performance_df.to_csv(slice_savepath, mode='w', header=True, index=False)
-
-sys.exit("Stopping the script after data processing.")
-
-
-
-
+# Compute and save performance slices
+try:
+    for feature in cat_features:
+        performance_df = compute_slices(test, feature, y_test, inference(model, X_test))
+        if os.path.exists(slice_savepath):
+            performance_df.to_csv(slice_savepath, mode='a', header=False, index=False)
+        else:
+            performance_df.to_csv(slice_savepath, mode='w', header=True, index=False)
+    logging.info(f"Performance slices saved to {slice_savepath}")
+except Exception as e:
+    logging.error(f"Error during performance slice computation: {e}")
+    sys.exit("Exiting due to error in performance slice computation.")
 
 
-
-
-# Proces the test data with the process_data function.
-
-# Train and save a model.

@@ -4,7 +4,7 @@ root - INFO - Test data processed.
 root - INFO - Searching best hyperparameters on 7 cores
 root - INFO - ********* Best parameters found ***********
 root - INFO - BEST PARAMS: {'learning_rate': 1.0, 'max_depth': 5, 'min_samples_split': 100, 'n_estimators': 10}
-root - INFO - Model and components saved to disk at: model
+root - INFO - Model and components saved to disk at: ./model
 root - INFO - Classification target labels: ['<=50K', '>50K']
 root - INFO - Precision: 0.759, Recall: 0.643, F-beta: 0.696
 root - INFO - Performance slices saved to output_files/performance_slices.csv

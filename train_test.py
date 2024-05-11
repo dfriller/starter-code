@@ -1,8 +1,9 @@
-import pytest, os, logging, pickle
+import pytest, os, logging, pickle,sys
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.exceptions import NotFittedError
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'ml', 'output_files')))
 from ml.model import inference, compute_model_metrics, compute_confusion_matrix
 from ml.data import process_data
 
