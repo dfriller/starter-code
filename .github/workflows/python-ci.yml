@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.11.9]  # Set to the Python version you use in development
+        python-version: [3.9.6]  # Set to the Python version you use in development
 
     steps:
     - uses: actions/checkout@v2
@@ -33,3 +33,4 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+
