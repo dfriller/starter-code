@@ -2,8 +2,7 @@ import pytest, os, logging, pickle,sys
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.exceptions import NotFittedError
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'ml', 'output_files')))
+from pathlib import Path
 from ml.model import inference, compute_model_metrics, compute_confusion_matrix
 from ml.data import process_data
 
@@ -16,7 +15,9 @@ use the return of data() as an argument
 def data():
     # code to load in the data.
     datapath = "./data/census.csv"
-    return pd.read_csv(datapath)
+    df = pd.read_csv(datapath)
+    df.columns = df.columns.str.strip()
+    return df
 
 
 @pytest.fixture(scope="module")
