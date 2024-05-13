@@ -7,10 +7,11 @@ import pickle
 import logging
 from ml.data import process_data
 
-# Paths to model files
+# Configuration
 savepath = 'model'
 filename = ['trained_model.pkl', 'encoder.pkl', 'labelizer.pkl']
 
+# Define data model
 class InputData(BaseModel):
     age: int
     workclass: str
@@ -30,20 +31,20 @@ class InputData(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "age": 50,
-                "workclass": "Private",
-                "fnlgt": 234721,
-                "education": "Doctorate",
-                "education_num": 16,
-                "marital_status": "Separated",
-                "occupation": "Exec-managerial",
-                "relationship": "Not-in-family",
-                "race": "Black",
-                "sex": "Female",
-                "capital_gain": 0,
-                "capital_loss": 0,
-                "hours_per_week": 50,
-                "native_country": "United-States"
+                'age': 50,
+                'workclass': "Private",
+                'fnlgt': 234721,
+                'education': "Doctorate",
+                'education_num': 16,
+                'marital_status': "Separated",
+                'occupation': "Exec-managerial",
+                'relationship': "Not-in-family",
+                'race': "Black",
+                'sex': "Female",
+                'capital_gain': 0,
+                'capital_loss': 0,
+                'hours_per_week': 50,
+                'native_country': "United-States"
             }
         }
 
@@ -58,13 +59,12 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup_event():
     global model, encoder, lb
-    try:
+    if os.path.isfile(os.path.join(savepath, filename[0])):
         model = pickle.load(open(os.path.join(savepath, filename[0]), "rb"))
         encoder = pickle.load(open(os.path.join(savepath, filename[1]), "rb"))
         lb = pickle.load(open(os.path.join(savepath, filename[2]), "rb"))
-    except FileNotFoundError:
-        logging.error("Model files not found. Please check the paths and filenames.")
 
+# Define endpoints
 @app.get("/")
 async def greetings():
     return "Welcome to the model inference API!"
@@ -72,20 +72,20 @@ async def greetings():
 @app.post("/inference/")
 async def ingest_data(inference: InputData):
     data = {
-        "age": inference.age,
-        "workclass": inference.workclass,
-        "fnlgt": inference.fnlgt,
-        "education": inference.education,
-        "education-num": inference.education_num,
-        "marital-status": inference.marital_status,
-        "occupation": inference.occupation,
-        "relationship": inference.relationship,
-        "race": inference.race,
-        "sex": inference.sex,
-        "capital-gain": inference.capital_gain,
-        "capital-loss": inference.capital_loss,
-        "hours-per-week": inference.hours_per_week,
-        "native-country": inference.native_country,
+        'age': inference.age,
+        'workclass': inference.workclass,
+        'fnlgt': inference.fnlgt,
+        'education': inference.education,
+        'education-num': inference.education_num,
+        'marital-status': inference.marital_status,
+        'occupation': inference.occupation,
+        'relationship': inference.relationship,
+        'race': inference.race,
+        'sex': inference.sex,
+        'capital-gain': inference.capital_gain,
+        'capital-loss': inference.capital_loss,
+        'hours-per-week': inference.hours_per_week,
+        'native-country': inference.native_country,
     }
     sample = pd.DataFrame(data, index=[0])
 
@@ -101,9 +101,10 @@ async def ingest_data(inference: InputData):
         "native-country",
     ]
 
-    # Ensure model is loaded
-    if not model or not encoder or not lb:
-        raise HTTPException(status_code=500, detail="Model or encoders are not loaded properly.")
+    if os.path.isfile(os.path.join(savepath, filename[0])):
+        model = pickle.load(open(os.path.join(savepath, filename[0]), "rb"))
+        encoder = pickle.load(open(os.path.join(savepath, filename[1]), "rb"))
+        lb = pickle.load(open(os.path.join(savepath, filename[2]), "rb"))
 
     sample, _, _, _ = process_data(
         sample,
@@ -127,6 +128,8 @@ async def ingest_data(inference: InputData):
 
 if __name__ == '__main__':
     pass
+
+
 
 
 

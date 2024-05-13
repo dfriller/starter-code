@@ -78,7 +78,41 @@ def test_inference_class0():
 
     # Log and assert prediction
     logging.info(f'********* prediction = {result["prediction"]} ********')
-    assert result["prediction"][0] == '<=50K'
+    assert result["prediction"] == '<=50K'
+
+
+def test_inference_class1():
+    """
+    Test the model inference output for a sample with expected prediction '>50K'
+    """
+    sample = {
+        'age': 45,
+        'workclass': "Private",
+        'fnlgt': 123456,
+        'education': "Masters",
+        'education_num': 14,
+        'marital_status': "Married-civ-spouse",
+        'occupation': "Exec-managerial",
+        'relationship': "Husband",
+        'race': "White",
+        'sex': "Male",
+        'capital_gain': 10000,
+        'capital_loss': 0,
+        'hours_per_week': 60,
+        'native_country': "United-States"
+    }
+
+    response = client.post("/inference/", json=sample)
+
+    # Validate response and output
+    assert response.status_code == 200
+    result = response.json()
+    assert result["age"] == 45
+    assert result["fnlgt"] == 123456
+
+    # Log and assert prediction
+    logging.info(f'********* prediction = {result["prediction"]} ********')
+    assert result["prediction"] == '>50K'
 
 def test_incomplete_inference_query():
     """
