@@ -1,8 +1,8 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import pickle, os, sys, logging
-from data import process_data
-from model import train_model, compute_model_metrics, inference, compute_slices, compute_confusion_matrix
+from ml.data import process_data
+from ml.model import train_model, compute_model_metrics, inference, compute_slices, compute_confusion_matrix
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

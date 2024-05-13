@@ -4,7 +4,6 @@ from sklearn.model_selection import GridSearchCV
 import pandas as pd
 import multiprocessing
 import logging
-from data import process_data
 
 
 logging.basicConfig(filename='journal.log',
