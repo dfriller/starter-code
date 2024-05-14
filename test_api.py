@@ -1,10 +1,10 @@
 from fastapi.testclient import TestClient
-import json
 import logging
 
 from main import app
 
 client = TestClient(app)
+
 
 def test_root():
     """
@@ -13,6 +13,7 @@ def test_root():
     response = client.get("/")
     assert response.status_code == 200
     assert response.json() == "Welcome to the model inference API!"
+
 
 def test_inference():
     """
@@ -46,6 +47,7 @@ def test_inference():
     # Log and assert prediction
     logging.info(f'********* prediction = {result["prediction"]} ********')
     assert result["prediction"] == '>50K'
+
 
 def test_inference_class0():
     """
@@ -114,6 +116,7 @@ def test_inference_class1():
     logging.info(f'********* prediction = {result["prediction"]} ********')
     assert result["prediction"] == '>50K'
 
+
 def test_incomplete_inference_query():
     """
     Test that an incomplete sample does not generate a prediction
@@ -128,6 +131,7 @@ def test_incomplete_inference_query():
 
     assert 'prediction' not in response.json().keys()
     logging.warning(f"The sample has {len(sample)} features. Must have 14 features.")
+
 
 if __name__ == '__main__':
     test_root()

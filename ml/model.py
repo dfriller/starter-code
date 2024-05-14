@@ -1,4 +1,5 @@
-from sklearn.metrics import fbeta_score, precision_score, recall_score, confusion_matrix
+from sklearn.metrics import (fbeta_score, precision_score, recall_score,
+                             confusion_matrix)
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.model_selection import GridSearchCV
 import pandas as pd
@@ -55,7 +56,8 @@ def train_model(X_train, y_train):
 
 def compute_model_metrics(y, preds):
     """
-    Validates the trained machine learning model using precision, recall, and F1.
+    Validates the trained machine learning model using precision,
+    recall, and F1.
 
     Inputs
     ------
@@ -92,6 +94,7 @@ def inference(model, X):
     preds = model.predict(X)
     return preds
 
+
 def compute_confusion_matrix(y, preds, labels=None):
     """
     Compute confusion matrix using the predictions and ground thruth provided
@@ -107,6 +110,7 @@ def compute_confusion_matrix(y, preds, labels=None):
     """
     cm = confusion_matrix(y, preds)
     return cm
+
 
 def compute_slices(df, feature, y, preds):
     """
@@ -134,14 +138,16 @@ def compute_slices(df, feature, y, preds):
     df['y'] = y
     df['preds'] = preds
     slices = df[feature].unique()
-    df_performance = pd.DataFrame(columns=["feature", "n_samples", "precision", "recall", "fbeta"])
+    df_performance = pd.DataFrame(columns=["feature", "n_samples",
+                                           "precision", "recall", "fbeta"])
 
     for slice_value in slices:
         slice_data = df[df[feature] == slice_value]
         n_samples = len(slice_data)
         slice_data = slice_data.reset_index(drop=True)
 
-        precision, recall, fbeta = compute_model_metrics(slice_data["y"], slice_data["preds"])
+        precision, recall, fbeta = compute_model_metrics(slice_data["y"],
+                                                         slice_data["preds"])
 
         # Create a DataFrame from the dictionary and use concat
         new_row_df = pd.DataFrame([{
@@ -151,7 +157,7 @@ def compute_slices(df, feature, y, preds):
             'recall': recall,
             'fbeta': fbeta
         }])
-        df_performance = pd.concat([df_performance, new_row_df], ignore_index=True)
+        df_performance = pd.concat([df_performance, new_row_df],
+                                   ignore_index=True)
 
     return df_performance
-

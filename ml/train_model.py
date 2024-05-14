@@ -1,19 +1,25 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-import pickle, os, sys, logging
+import pickle
+import os
+import sys
+import logging
 from ml.data import process_data
-from ml.model import train_model, compute_model_metrics, inference, compute_slices, compute_confusion_matrix
+from ml.model import train_model, compute_model_metrics
+from ml.model import inference, compute_slices
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
 # Load in the data
 current_directory = os.getcwd()
-data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', 'census.csv'))
+data_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                            '..', 'data', 'census.csv'))
 data = pd.read_csv(data_path, sep=", ", engine='python')
 
 # Split the data into training and test sets
-train, test = train_test_split(data, test_size=0.20, random_state=10, stratify=data['salary'])
+train, test = train_test_split(data, test_size=0.20, random_state=10,
+                               stratify=data['salary'])
 logging.info("Data split into training and test sets.")
 
 
@@ -30,12 +36,17 @@ cat_features = [
 ]
 
 # Process the training data
-X_train, y_train, encoder, lb = process_data(train, categorical_features=cat_features, label="salary", training=True)
+X_train, y_train, encoder, lb = process_data(train,
+                                             categorical_features=cat_features,
+                                             label="salary", training=True)
 logging.info("Training data processed.")
 
 
 # Process the test data
-X_test, y_test, encoder, lb = process_data(test, categorical_features=cat_features, label="salary", training=False, encoder=encoder, lb=lb)
+X_test, y_test, encoder, lb = process_data(test,
+                                           categorical_features=cat_features,
+                                           label="salary", training=False,
+                                           encoder=encoder, lb=lb)
 logging.info("Test data processed.")
 
 # Define the path to save model files
@@ -47,7 +58,8 @@ os.makedirs(savepath, exist_ok=True)
 
 # Check if the trained model exists on disk and load it
 try:
-    if all(os.path.isfile(os.path.join(savepath, fname)) for fname in filenames):
+    if all(os.path.isfile(os.path.join(savepath, fname))
+           for fname in filenames):
         model = pickle.load(open(os.path.join(savepath, filenames[0]), 'rb'))
         encoder = pickle.load(open(os.path.join(savepath, filenames[1]), 'rb'))
         lb = pickle.load(open(os.path.join(savepath, filenames[2]), 'rb'))
@@ -64,9 +76,12 @@ except Exception as e:
     sys.exit("Exiting due to error in model handling.")
 
 # Compute model metrics
-precision, recall, fbeta = compute_model_metrics(y_test, inference(model, X_test))
+precision, recall, fbeta = compute_model_metrics(y_test,
+                                                 inference(model, X_test))
 logging.info(f"Classification target labels: {list(lb.classes_)}")
-logging.info(f"Precision: {precision:.3f}, Recall: {recall:.3f}, F-beta: {fbeta:.3f}")
+logging.info(f"Precision: {precision:.3f},"
+             f" Recall: {recall:.3f},"
+             f" F-beta: {fbeta:.3f}")
 
 # Define output directory for performance slices
 output_dir = 'output_files'
@@ -78,14 +93,15 @@ slice_savepath = os.path.join(output_dir, 'performance_slices.csv')
 # Compute and save performance slices
 try:
     for feature in cat_features:
-        performance_df = compute_slices(test, feature, y_test, inference(model, X_test))
+        performance_df = compute_slices(test, feature, y_test,
+                                        inference(model, X_test))
         if os.path.exists(slice_savepath):
-            performance_df.to_csv(slice_savepath, mode='a', header=False, index=False)
+            performance_df.to_csv(slice_savepath, mode='a',
+                                  header=False, index=False)
         else:
-            performance_df.to_csv(slice_savepath, mode='w', header=True, index=False)
+            performance_df.to_csv(slice_savepath, mode='w',
+                                  header=True, index=False)
     logging.info(f"Performance slices saved to {slice_savepath}")
 except Exception as e:
     logging.error(f"Error during performance slice computation: {e}")
     sys.exit("Exiting due to error in performance slice computation.")
-
-

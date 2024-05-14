@@ -1,15 +1,15 @@
-from fastapi import FastAPI, HTTPException
-from typing import Union, Optional
+from fastapi import FastAPI
 from pydantic import BaseModel
 import pandas as pd
 import os
 import pickle
-import logging
 from ml.data import process_data
+
 
 # Configuration
 savepath = 'model'
 filename = ['trained_model.pkl', 'encoder.pkl', 'labelizer.pkl']
+
 
 # Define data model
 class InputData(BaseModel):
@@ -48,12 +48,14 @@ class InputData(BaseModel):
             }
         }
 
+
 # Instantiate FastAPI app
 app = FastAPI(
     title="Inference API",
     description="An API that takes a sample and runs an inference",
     version="1.0.0"
 )
+
 
 # Load model artifacts on startup of the application to reduce latency
 @app.on_event("startup")
@@ -64,10 +66,12 @@ async def startup_event():
         encoder = pickle.load(open(os.path.join(savepath, filename[1]), "rb"))
         lb = pickle.load(open(os.path.join(savepath, filename[2]), "rb"))
 
+
 # Define endpoints
 @app.get("/")
 async def greetings():
     return "Welcome to the model inference API!"
+
 
 @app.post("/inference/")
 async def ingest_data(inference: InputData):
@@ -128,14 +132,3 @@ async def ingest_data(inference: InputData):
 
 if __name__ == '__main__':
     pass
-
-
-
-
-
-
-
-
-
-
-

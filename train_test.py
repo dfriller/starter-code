@@ -1,18 +1,16 @@
-import pytest, os, logging, pickle,sys
+import logging
+import pickle
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.exceptions import NotFittedError
 from ml.model import inference, compute_model_metrics, compute_confusion_matrix
 from ml.data import process_data
+import pytest
 
 
-"""
-Fixture - The test functions will 
-use the return of data() as an argument
-"""
 @pytest.fixture(scope="module")
 def data():
-    # code to load in the data.
+    """Fixture to load data from a CSV file."""
     datapath = "./data/census.csv"
     df = pd.read_csv(datapath)
     df.columns = df.columns.str.strip()
@@ -21,170 +19,98 @@ def data():
 
 @pytest.fixture(scope="module")
 def path():
+    """Fixture to provide file path."""
     return "./data/census.csv"
 
 
 @pytest.fixture(scope="module")
 def features():
-    """
-    Fixture - will return the categorical features as argument
-    """
-    cat_features = [    "workclass",
-                        "education",
-                        "marital-status",
-                        "occupation",
-                        "relationship",
-                        "race",
-                        "sex",
-                        "native-country"]
+    """Fixture to return categorical features."""
+    cat_features = [
+        "workclass", "education", "marital-status", "occupation",
+        "relationship", "race", "sex", "native-country"
+    ]
     return cat_features
 
 
 @pytest.fixture(scope="module")
 def train_dataset(data, features):
-    """
-    Fixture - returns cleaned train dataset to be used for model testing
-    """
-    train, test = train_test_split( data,
-                                test_size=0.20,
-                                random_state=10,
-                                stratify=data['salary']
-                                )
-    X_train, y_train, encoder, lb = process_data(
-                                            train,
-                                            categorical_features=features,
-                                            label="salary",
-                                            training=True
-                                        )
+    """Fixture to return a cleaned training dataset."""
+    train, _ = train_test_split(
+        data, test_size=0.20, random_state=10, stratify=data['salary']
+    )
+    X_train, y_train, _, _ = process_data(
+        train, categorical_features=features, label="salary", training=True
+    )
     return X_train, y_train
 
 
-"""
-Test methods
-"""
 def test_import_data(path):
-    """
-    Test presence and shape of dataset file
-    """
+    """Test the presence and shape of the dataset file."""
     try:
         df = pd.read_csv(path)
-
+        assert df.shape[0] > 0
+        assert df.shape[1] > 0
     except FileNotFoundError as err:
         logging.error("File not found")
         raise err
-
-    # Check the df shape
-    try:
-        assert df.shape[0] > 0
-        assert df.shape[1] > 0
-
-    except AssertionError as err:
-        logging.error(
-        "Testing import_data: The file doesn't appear to have rows and columns")
-        raise err
+    except AssertionError:
+        logging.error("The file doesn't appear to have rows and columns")
+        raise
 
 
 def test_features(data, features):
-    """
-    Check that categorical features are in dataset
-    """
-    try:
-        assert sorted(set(data.columns).intersection(features)) == sorted(features)
-    except AssertionError as err:
-        logging.error(
-        "Testing dataset: Features are missing in the data columns")
-        raise err
+    """Check that all categorical features are in dataset."""
+    assert sorted(set(data.columns).intersection(features)) == sorted(features)
 
 
 def test_is_model():
-    """
-    Check saved model is present
-    """
+    """Check if the model file exists and can be loaded."""
     savepath = "./model/trained_model.pkl"
-    if os.path.isfile(savepath):
-        try:
-            _ = pickle.load(open(savepath, 'rb'))
-        except Exception as err:
-            logging.error(
-            "Testing saved model: Saved model does not appear to be valid")
-            raise err
-    else:
-        pass
+    try:
+        with open(savepath, 'rb') as model_file:
+            pickle.load(model_file)
+    except FileNotFoundError:
+        logging.error("Model file not found")
+        raise
+    except pickle.UnpicklingError:
+        logging.error("The file does not appear to be a valid model file")
+        raise
 
 
 def test_is_fitted_model(train_dataset):
-    """
-    Check saved model is fitted
-    """
-
-    X_train, y_train = train_dataset
-    savepath = "./model/trained_model.pkl"
-    model = pickle.load(open(savepath, 'rb'))
-
+    """Verify that the model has been fitted."""
+    X_train, _ = train_dataset
+    model = pickle.load(open("./model/trained_model.pkl", 'rb'))
     try:
         model.predict(X_train)
     except NotFittedError as err:
-        logging.error(
-        f"Model is not fit, error {err}")
-        raise err
+        logging.error(f"Model is not fitted, error {err}")
+        raise
 
 
 def test_inference(train_dataset):
-    """
-    Check inference function
-    """
-    X_train, y_train = train_dataset
-
-    savepath = "./model/trained_model.pkl"
-    if os.path.isfile(savepath):
-        model = pickle.load(open(savepath, 'rb'))
-
-        try:
-            preds = inference(model, X_train)
-        except Exception as err:
-            logging.error(
-            "Inference cannot be performed on saved model and train data")
-            raise err
-    else:
-        pass
+    """Check inference function."""
+    X_train, _ = train_dataset
+    model = pickle.load(open("./model/trained_model.pkl", 'rb'))
+    preds = inference(model, X_train)
+    assert preds is not None, "No predictions returned"
+    assert preds.shape[0] == X_train.shape[0], "Prediction length mismatch"
 
 
 def test_compute_model_metrics(train_dataset):
-    """
-    Check calculation of performance metrics function
-    """
+    """Check calculation of performance metrics."""
     X_train, y_train = train_dataset
+    model = pickle.load(open("./model/trained_model.pkl", 'rb'))
+    preds = inference(model, X_train)
+    precision, recall, fbeta = compute_model_metrics(y_train, preds)
 
-    savepath = "./model/trained_model.pkl"
-    if os.path.isfile(savepath):
-        model = pickle.load(open(savepath, 'rb'))
-        preds = inference(model, X_train)
-
-        try:
-            precision, recall, fbeta = compute_model_metrics(y_train, preds)
-        except Exception as err:
-            logging.error(
-            "Performance metrics cannot be calculated on train data")
-            raise err
-    else:
-        pass
 
 def test_compute_confusion_matrix(train_dataset):
-    """
-    Check calculation of confusion matrix function
-    """
+    """Check calculation of the confusion matrix."""
     X_train, y_train = train_dataset
-
-    savepath = "./model/trained_model.pkl"
-    if os.path.isfile(savepath):
-        model = pickle.load(open(savepath, 'rb'))
-        preds = inference(model, X_train)
-
-        try:
-            cm = compute_confusion_matrix(y_train, preds)
-        except Exception as err:
-            logging.error(
-            "Confusion matrix cannot be calculated on train data")
-            raise err
-    else:
-        pass
+    model = pickle.load(open("./model/trained_model.pkl", 'rb'))
+    preds = inference(model, X_train)
+    cm = compute_confusion_matrix(y_train, preds)
+    assert cm is not None, "Confusion matrix not generated"
+    assert cm.shape == (2, 2), "Confusion matrix shape is incorrect"
